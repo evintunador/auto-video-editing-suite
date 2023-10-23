@@ -19,5 +19,3 @@ This repo takes a .mov video from quicktime and removes silent portions as a qui
 ## NOTE
 
 The script is not designed to handle errors or be generally useable past what I need it for. But if you have an edit you'd like to make feel free to do so, and as long as it doesn't make the day-to-day implementation more comlicated for me then I'll merge it. 
-
-testing 123 nothing to see here 
