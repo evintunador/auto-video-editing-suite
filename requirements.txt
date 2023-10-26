@@ -5,6 +5,7 @@ ffmpeg==1.4
 idna==3.4
 imageio==2.31.6
 imageio-ffmpeg==0.4.9
+logging==0.4.9.6
 moviepy==1.0.3
 numpy==1.26.1
 Pillow==10.0.1
