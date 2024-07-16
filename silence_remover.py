@@ -1,127 +1,146 @@
-import sys                                                                                                                      
-import os            
-from config import *    
-from tqdm import tqdm
-import logging
 import argparse
+import os
+import subprocess
+from tqdm import tqdm
 import shutil
 
-# supposed to suppress all of moviepy's annoying output but i don't think it works
-# does moviepy use print statements? maybe that's why 
-if not debug_mode:
-    logging.getLogger('moviepy').setLevel(logging.CRITICAL)
-
-from moviepy.editor import VideoFileClip, concatenate_videoclips                      
-from pydub import AudioSegment                                                        
-from pydub.silence import detect_nonsilent  
-
-                                                                                         
-def remove_silence(input_file, output_file, silence_thresh=silence_threshold, buff_time=buffer_time, debug_mode=debug_mode):    
-    # reset temp clips folder
+def process_video(input_file, output_file, chunk_duration=300, db_threshold=-30, buffer_duration=0.25):
+    temp_dir = "temp_chunks"
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    min_silence_length = buffer_duration * 4
+    
     try:
-        shutil.rmtree('temp_clips')  
-        os.makedirs('temp_clips/')
-    except FileNotFoundError:
-        os.makedirs('temp_clips/')
+        # Split video into chunks
+        chunk_list = split_video(input_file, chunk_duration, temp_dir)
+        
+        processed_chunks = []
+        for i, chunk in enumerate(tqdm(chunk_list, desc="Processing chunks")):
+            silence_parts, chunk_duration = detect_silence(chunk, db_threshold, buffer_duration, min_silence_length)
+            output_chunk = f"{temp_dir}/processed_chunk_{i}.mp4"
+            cut_silence(chunk, silence_parts, chunk_duration, output_chunk)
+            processed_chunks.append(output_chunk)
+        
+        # Concatenate processed chunks
+        concatenate_chunks(processed_chunks, output_file)
+        
+    finally:
+        # Clean up temporary files
+        #for file in os.listdir(temp_dir):
+            #os.remove(os.path.join(temp_dir, file))
+        #os.rmdir(temp_dir)
+        print("skipping cleanup")
 
-    # Load the video file                                                             
-    video = VideoFileClip(input_file)                                                 
-                                                                                         
-    # Extract the audio                                                               
-    audio = video.audio                                                               
-                                                                                         
-    # Save the audio to a temporary file                                              
-    audio_file = 'temp_audio.wav'   
+def split_video(input_file, chunk_duration, temp_dir):
+    cmd = f"ffmpeg -i {input_file} -c copy -f segment -segment_time {chunk_duration} -reset_timestamps 1 {temp_dir}/chunk_%03d.mp4"
+    subprocess.run(cmd, shell=True, check=True)
+    return sorted([os.path.join(temp_dir, f) for f in os.listdir(temp_dir) if f.startswith("chunk_")])
+
+def detect_silence(input_chunk, db_threshold, buffer_duration, min_silence_length):
+    cmd = f"ffmpeg -i {input_chunk} -af silencedetect=noise={db_threshold}dB:d={min_silence_length} -f null -"
     try:
-        os.remove(audio_file) # jic there's one there from the previous run   
-    except FileNotFoundError:
-        pass                                               
-    audio.write_audiofile(audio_file)                                                 
-                                                                                         
-    # Load the audio with pydub                                                       
-    audio_pydub = AudioSegment.from_wav(audio_file)                                   
-                                                                                         
-    # Delete the temporary file                                                       
-    if not debug_mode:
-        os.remove(audio_file)                                                             
-                                                                                         
-    # Detect non-silent segments                                                      
-    nonsilent_segments = detect_nonsilent(audio_pydub, min_silence_len=minimum_silence_length, silence_thresh=silence_thresh)                                                        
-                                                                                         
-    # Add buffer time around the non-silent segments                                  
-    nonsilent_segments_buffered = [[max(0, start - buff_time), min(len(audio_pydub), end + buff_time)] for start, end in nonsilent_segments]       
+        output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode()
+    except subprocess.CalledProcessError as e:
+        print(f"Error running FFmpeg command: {e}")
+        return []
 
-    if debug_mode:
-        # initialize a list to hold silent segments
-        silent_segments = []
-
-        # Add segments between nonsilent segments
-        for i in tqdm(range(len(nonsilent_segments) - 1), desc="Finding Silent Segments"):
-            silent_start = nonsilent_segments[i][1]
-            silent_end = nonsilent_segments[i + 1][0]
-            silent_segments.append((silent_start, silent_end))
-
-        # Add segment from end of last nonsilent segment to end of audio
-        if nonsilent_segments[-1][1] < len(audio_pydub):
-            silent_segments.append((nonsilent_segments[-1][1], len(audio_pydub)))
-
-        # Remove buffer time around the silent segments                                  
-        silent_segments_buffered = [[max(0, start + buff_time), min(len(audio_pydub), end - buff_time)] for start, end in silent_segments]
-
-        # clear silent clips from previous run
+    silence_parts = []
+    for line in output.split('\n'):
         try:
-            shutil.rmtree('temp_silent_clips')  
-            os.makedirs('temp_silent_clips/')
-        except FileNotFoundError:
-            os.makedirs('temp_silent_clips/')
+            if "silence_start" in line:
+                start = float(line.split("silence_start: ")[1])
+                silence_parts.append([max(0, start + buffer_duration), None])
+            elif "silence_end" in line:
+                end = float(line.split("silence_end: ")[1].split()[0])
+                silence_duration = float(line.split("silence_duration: ")[1])
+                if silence_duration >= min_silence_length:
+                    silence_parts[-1][1] = end - buffer_duration
+                else:
+                    silence_parts.pop()  # Remove the last silence part if it's too short
+        except (IndexError, ValueError) as e:
+            print(f"Error parsing FFmpeg output line: {line}")
+            print(f"Error details: {e}")
+            continue
 
-        # Cut the video based on the buffered non-silent segments and save them to temp_folder
-        clip_paths = []
-        for i, (start, end) in tqdm(enumerate(silent_segments_buffered), desc="Writing Silent Clips"):
-            clip = video.subclip(start / 1000, end / 1000)
-            clip.write_videofile(f"temp_silent_clips/clip_{i}.mov", codec='libx264')   
-            clip_paths.append(f"temp_silent_clips/clip_{i}.mov")  
+    # Get the duration of the chunk
+    duration = float(subprocess.check_output(f"ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 {input_chunk}", shell=True).decode().strip())
 
-        # clean up memory
-        del silent_segments, silent_segments_buffered, clip_paths, clip, i, start, end
+    return silence_parts, duration
 
-    # Cut the video based on the buffered non-silent segments and save them to temp_folder
-    clip_paths = []
-    for i, (start, end) in tqdm(enumerate(nonsilent_segments_buffered), desc="Writing Nonsilent Clips"):
-        clip = video.subclip(start / 1000, end / 1000)
-        clip.write_videofile(f"temp_clips/clip_{i}.mov", codec='libx264')   
-        clip_paths.append(f"temp_clips/clip_{i}.mov")  
+def cut_silence(input_chunk, silence_parts, chunk_duration, output_chunk):
+    if not silence_parts:
+        shutil.copy(input_chunk, output_chunk)
+        return
 
-    # clean up memory
-    del video, audio, audio_file, audio_pydub, nonsilent_segments, nonsilent_segments_buffered
+    # Generate a list of parts to keep
+    keep_parts = []
+    if silence_parts[0][0] > 0:
+        keep_parts.append([0, silence_parts[0][0]])
+    
+    for i in range(len(silence_parts) - 1):
+        keep_parts.append([silence_parts[i][1], silence_parts[i+1][0]])
+    
+    # Check if there's non-silent content after the last silence part
+    if silence_parts[-1][1] < chunk_duration:
+        keep_parts.append([silence_parts[-1][1], chunk_duration])
 
-    # Initialize final clip
-    concatenated = VideoFileClip(clip_paths[0])
-    #concatenated.write_videofile('temp_clips/concatenated.mov', codec='libx264')
+    # If there are no parts to keep, it means the entire chunk is silent
+    if not keep_parts:
+        # Create a short (e.g., 0.1 second) silent video
+        cmd = f"ffmpeg -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -f lavfi -i color=c=black:s=1280x720:r=30 -t 0.1 -c:a aac -c:v libx264 {output_chunk}"
+        subprocess.run(cmd, shell=True, check=True)
+        return
 
-    # Iterative concatenation
-    for i in tqdm(range(1, len(clip_paths)), desc="Concatenating Clips"):
-        clip = VideoFileClip(clip_paths[i])
-        concatenated = concatenate_videoclips([concatenated, clip])
-        del clip  # Remove clip from memory                                                                      
+    # Generate filter complex string
+    filter_complex = ""
+    for i, (start, end) in enumerate(keep_parts):
+        filter_complex += f"[0:v]trim=start={start}:end={end},setpts=PTS-STARTPTS[v{i}];"
+        filter_complex += f"[0:a]atrim=start={start}:end={end},asetpts=PTS-STARTPTS[a{i}];"
+    
+    filter_complex += "".join(f"[v{i}][a{i}]" for i in range(len(keep_parts)))
+    filter_complex += f"concat=n={len(keep_parts)}:v=1:a=1[outv][outa]"
+    
+    cmd = f"ffmpeg -i {input_chunk} -filter_complex '{filter_complex}' -map '[outv]' -map '[outa]' {output_chunk}"
+    subprocess.run(cmd, shell=True, check=True)
 
-    # Write the final concatenated clip
-    concatenated.write_videofile(output_file, codec='libx264')
+def concatenate_chunks(chunk_list, output_file):
+    input_args = []
+    for chunk in chunk_list:
+        input_args.extend(['-i', chunk])
+    
+    filter_complex = ''.join(f'[{i}:v][{i}:a]' for i in range(len(chunk_list))) + \
+                     f'concat=n={len(chunk_list)}:v=1:a=1[outv][outa]'
+    
+    cmd = ['ffmpeg'] + input_args + [
+        '-filter_complex', filter_complex,
+        '-map', '[outv]', '-map', '[outa]',
+        '-c:v', 'libx264', '-c:a', 'aac',
+        output_file
+    ]
+    
+    try:
+        subprocess.run(cmd, check=True, stderr=subprocess.PIPE, universal_newlines=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error during concatenation: {e}")
+        print(f"FFmpeg error output: {e.stderr}")
+        raise
 
-    # Clean up: remove temporary clips and folder
-    if not debug_mode:
-        shutil.rmtree('temp_clips')     
-        shutil.rmtree('temp_silent_clips')        
-                                                                                         
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Remove silence from video files.')
-
-    parser.add_argument('input_file', type=str, help='Path to the input file.')
-    parser.add_argument('-o', '--output_file', type=str, default='output.mov', help='Path to the output file.')
-    parser.add_argument('-s', '--silence_thresh', type=int, default=silence_threshold, help='Silence threshold in dB.')
-    parser.add_argument('-b', '--buff_time', type=int, default=buffer_time, help='Buffer time in milliseconds.')
-    parser.add_argument('-d', '--debug', action='store_true', default=debug_mode, help='Enable debug mode. Keeps all temporary files and creates files for the silence gaps.')
-
+def main():
+    parser = argparse.ArgumentParser(description="Remove silence from video files.")
+    parser.add_argument("input_file", help="Path to the input video file")
+    parser.add_argument("-o", "--output_file", help="Path to the output video file")
+    parser.add_argument("-d", "--db_threshold", type=float, default=-45, help="Decibel threshold for silence detection. Default -45, raise to remove louder portions")
+    parser.add_argument("-b", "--buffer_duration", type=float, default=0.1, help="Buffer duration around non-silent parts. Default 0.1 seconds")
+    parser.add_argument("-c", "--chunk_duration", type=int, default=150, help="Duration of video chunks to work with (rather than using up hella ram by doing the entire video at once). Default 150 seconds")
+    parser.add_argument("-m", "--min_silence_factor", type=float, default=0.4, help="Minimum silence duration required in order for it to be cut out. Default 0.4 seconds, must be greater than or equal to buffer duration")
+    
     args = parser.parse_args()
+    
+    if not args.output_file:
+        base, ext = os.path.splitext(args.input_file)
+        args.output_file = f"{base}_no_silence{ext}"
+    
+    process_video(args.input_file, args.output_file, args.chunk_duration, args.db_threshold, args.buffer_duration)
 
-    remove_silence(args.input_file, args.output_file, args.silence_thresh, args.buff_time, args.debug)
+if __name__ == "__main__":
+    main()
