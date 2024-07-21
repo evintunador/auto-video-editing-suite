@@ -12,7 +12,6 @@ This repo takes a .mp4 video and removes silent portions as a quick and easy way
 3. Enjoy your shittily edited video 
 
  ## NOTES
-
- I use it for my youtube channel [@Tunadorable](https://www.youtube.com/channel/UCeQhm8DwHBg_YEYY0KGM1GQ go check it out)
-
- I originally had the idea and when I searched for it online I found https://github.com/carykh/jumpcutter but their version was hella glitchy for me so I just wrote it from scratch. Also wtf is with them charging $100 for the app version of that script, I tried the free trial and that thing didn't even work either
+- I use it for my youtube channel [@Tunadorable](https://www.youtube.com/channel/UCeQhm8DwHBg_YEYY0KGM1GQ go check it out)
+- I originally had the idea and when I searched for it online I found https://github.com/carykh/jumpcutter but their version was hella glitchy for me so I just wrote it from scratch. Also wtf is with them charging $100 for the app version of that script, I tried the free trial and that thing didn't even work either
+- There's also `video_concatenator.py` which is what it sounds like, a simple script that takes the path to any number of mp4's as input and concatenates them in the order that you provided. obvi i really hate opening up a real video editor
