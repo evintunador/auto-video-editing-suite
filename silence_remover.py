@@ -3,6 +3,7 @@ import os
 import subprocess
 from tqdm import tqdm
 import shutil
+import ffmpeg
 
 def process_video(input_file, output_file, chunk_duration=300, db_threshold=-30, buffer_duration=0.25):
     temp_dir = "temp_chunks"
