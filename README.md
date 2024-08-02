@@ -8,7 +8,13 @@
 2. Install the required Python packages by running `pip install -r requirements.txt` in your terminal.
 3. Install ffmpeg. On mac if you have homebrew that's `brew install ffmpeg`
 3. Run `python silence_remover.py -h` to seea  list of optional arguments to tweak
-4. Run `python silence_remover.py "path/to/video/file/input.mp4" -o "path/to/video/file/output.mp4"`
+4. Run `python silence_remover.py "path/to/video/file/input.mp4"` to trim silences from a video. By default the new video will be named/placed `path/to/video/file/input_no_silence.mp4`. If you've got a .txt file containing youtube timestamps in the following format then you can also input that into this script using `-t path/to/timestamps.txt` and the script will spit out `path/to/timestamps_adjusted.txt` with the newly adjusted times. Format:
+```txt
+0:00 string one
+1:23 string two
+45:67 string three
+89:10 etc
+```
 2. Be annoyed by the excessive terminal output of ffmpeg
 3. Enjoy your shittily edited video 
 
