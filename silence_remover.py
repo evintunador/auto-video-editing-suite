@@ -6,7 +6,7 @@ import shutil
 import ffmpeg
 from datetime import timedelta
 
-def process_video(input_file, output_file, chunk_duration=300, db_threshold=-30, buffer_duration=0.25, timestamps_file=None, output_timestamps_file=None):
+def process_video(input_file, output_file, chunk_duration, db_threshold, buffer_duration, timestamps_file=None, output_timestamps_file=None):
     temp_dir = "temp_chunks"
     os.makedirs(temp_dir, exist_ok=True)
     
@@ -236,9 +236,9 @@ def main():
     parser.add_argument("input_file", help="Path to the input video file")
     parser.add_argument("-o", "--output_file", help="Path to the output video file")
     parser.add_argument("-d", "--db_threshold", type=float, default=-45, help="Decibel threshold for silence detection. Default -45, raise to remove louder portions")
-    parser.add_argument("-b", "--buffer_duration", type=float, default=0.1, help="Buffer duration around non-silent parts. Default 0.1 seconds")
+    parser.add_argument("-b", "--buffer_duration", type=float, default=0.2, help="Buffer duration around non-silent parts. Default 0.1 seconds")
     parser.add_argument("-c", "--chunk_duration", type=int, default=150, help="Duration of video chunks to work with. Default 150 seconds")
-    parser.add_argument("-m", "--min_silence_factor", type=float, default=0.4, help="Minimum silence duration required in order for it to be cut out. Default 0.4 seconds, must be greater than or equal to buffer duration")
+    parser.add_argument("-m", "--min_silence_factor", type=float, default=0.6, help="Minimum silence duration required in order for it to be cut out. Default 0.4 seconds, must be greater than or equal to buffer duration")
     parser.add_argument("-t", "--timestamps", help="Path to the input timestamps file")
     parser.add_argument("--output_timestamps", help="Path to the output adjusted timestamps file")
     
