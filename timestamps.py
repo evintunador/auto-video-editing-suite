@@ -2,7 +2,7 @@ from pynput import keyboard
 import time
 import os
 
-hotkey = '`'
+hotkey = '='
 start_time = None
 timestamps = []
 timestamps_file = "timestamps.txt"

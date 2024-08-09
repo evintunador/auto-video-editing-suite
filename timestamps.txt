@@ -1,5 +1,4 @@
 0:00 Intro
-0:02 these
-0:04 are
-0:06 example
-0:09 timestamps
+0:01
+0:02
+0:04
