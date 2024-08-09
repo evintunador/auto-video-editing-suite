@@ -4,25 +4,6 @@ import subprocess
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QLabel, QSpinBox, QDoubleSpinBox, QLineEdit, QTextEdit
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 
-#class ProcessThread(QThread):
-#    finished = pyqtSignal()
-#    error = pyqtSignal(str)
-
-#    def __init__(self, command):
-#        QThread.__init__(self)
-#        self.command = command
-
-#    def run(self):
- #       try:
-#            process = subprocess.Popen(self.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-#            stdout, stderr = process.communicate()
-#            if process.returncode != 0:
-#                self.error.emit(stderr)
-#            else:
- #               self.finished.emit()
-#        except Exception as e:
- #           self.error.emit(str(e))
-
 class ProcessThread(QThread):
     finished = pyqtSignal()
     error = pyqtSignal(str)
@@ -203,12 +184,6 @@ class SilenceRemoverGUI(QWidget):
 
         if output_timestamps_file != 'No file selected':
             command.extend(['--output_timestamps', output_timestamps_file])
-
-        # Create and start the processing thread
-        #self.thread = ProcessThread(command)
-        #self.thread.finished.connect(self.onProcessingFinished)
-        #self.thread.error.connect(self.onProcessingError)
-        #self.thread.start()
 
         # Clear previous output
         self.terminalOutput.clear()
