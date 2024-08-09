@@ -1,12 +1,32 @@
 import sys
 import os
 import subprocess
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QLabel, QSpinBox, QDoubleSpinBox, QLineEdit
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QLabel, QSpinBox, QDoubleSpinBox, QLineEdit, QTextEdit
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
+
+#class ProcessThread(QThread):
+#    finished = pyqtSignal()
+#    error = pyqtSignal(str)
+
+#    def __init__(self, command):
+#        QThread.__init__(self)
+#        self.command = command
+
+#    def run(self):
+ #       try:
+#            process = subprocess.Popen(self.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+#            stdout, stderr = process.communicate()
+#            if process.returncode != 0:
+#                self.error.emit(stderr)
+#            else:
+ #               self.finished.emit()
+#        except Exception as e:
+ #           self.error.emit(str(e))
 
 class ProcessThread(QThread):
     finished = pyqtSignal()
     error = pyqtSignal(str)
+    output = pyqtSignal(str)
 
     def __init__(self, command):
         QThread.__init__(self)
@@ -14,10 +34,13 @@ class ProcessThread(QThread):
 
     def run(self):
         try:
-            process = subprocess.Popen(self.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            stdout, stderr = process.communicate()
-            if process.returncode != 0:
-                self.error.emit(stderr)
+            process = subprocess.Popen(self.command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True)
+            for line in iter(process.stdout.readline, ''):
+                self.output.emit(line.strip())
+            process.stdout.close()
+            return_code = process.wait()
+            if return_code != 0:
+                self.error.emit(f"Process exited with return code {return_code}")
             else:
                 self.finished.emit()
         except Exception as e:
@@ -112,6 +135,12 @@ class SilenceRemoverGUI(QWidget):
         self.statusLabel = QLabel('Ready')
         layout.addWidget(self.statusLabel)
 
+        # Terminal output
+        self.terminalOutput = QTextEdit()
+        self.terminalOutput.setReadOnly(True)
+        layout.addWidget(QLabel('Terminal Output:'))
+        layout.addWidget(self.terminalOutput)
+
         self.setLayout(layout)
         self.setWindowTitle('Silence Remover')
         self.show()
@@ -176,9 +205,19 @@ class SilenceRemoverGUI(QWidget):
             command.extend(['--output_timestamps', output_timestamps_file])
 
         # Create and start the processing thread
+        #self.thread = ProcessThread(command)
+        #self.thread.finished.connect(self.onProcessingFinished)
+        #self.thread.error.connect(self.onProcessingError)
+        #self.thread.start()
+
+        # Clear previous output
+        self.terminalOutput.clear()
+
+        # Create and start the processing thread
         self.thread = ProcessThread(command)
         self.thread.finished.connect(self.onProcessingFinished)
         self.thread.error.connect(self.onProcessingError)
+        self.thread.output.connect(self.updateTerminalOutput)
         self.thread.start()
 
     def onProcessingFinished(self):
@@ -188,6 +227,10 @@ class SilenceRemoverGUI(QWidget):
     def onProcessingError(self, error_message):
         self.statusLabel.setText(f"Error: {error_message}")
         self.processButton.setEnabled(True)
+
+    def updateTerminalOutput(self, line):
+        self.terminalOutput.append(line)
+        self.terminalOutput.verticalScrollBar().setValue(self.terminalOutput.verticalScrollBar().maximum())
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
