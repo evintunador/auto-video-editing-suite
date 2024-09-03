@@ -7,7 +7,7 @@ cd /Users/evintunador/Documents/repos/video-silence-remover # /path/to/your/scri
 source venv/bin/activate
 
 # Run the GUI script
-python concatenator.py
+python video_concatenator_gui.py
 
 # Deactivate the virtual environment when the GUI is closed
 deactivate

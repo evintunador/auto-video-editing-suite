@@ -20,7 +20,7 @@ def on_activate():
     elapsed_time = time.time() - start_time
     minutes, seconds = divmod(int(elapsed_time), 60)
     
-    timestamp = f"{minutes}:{seconds:02d}"
+    timestamp = f"{minutes}:{seconds:02d} timestamp"
     timestamps.append(timestamp)
     print(timestamp)  # Print the new timestamp
 

@@ -63,7 +63,7 @@ def process_video(input_file, output_file, chunk_duration, db_threshold, buffer_
         os.rmdir(temp_dir)
 
 def split_video(input_file, chunk_duration, temp_dir):
-    cmd = f"ffmpeg -i {input_file} -c copy -f segment -segment_time {chunk_duration} -reset_timestamps 1 {temp_dir}/chunk_%03d.mp4"
+    cmd = f'ffmpeg -i "{input_file}" -c copy -f segment -segment_time {chunk_duration} -reset_timestamps 1 {temp_dir}/chunk_%03d.mp4'
     subprocess.run(cmd, shell=True, check=True)
     return sorted([os.path.join(temp_dir, f) for f in os.listdir(temp_dir) if f.startswith("chunk_")])
 
@@ -134,7 +134,7 @@ def cut_silence(input_chunk, silence_parts, chunk_duration, output_chunk):
     filter_complex += "".join(f"[v{i}][a{i}]" for i in range(len(keep_parts)))
     filter_complex += f"concat=n={len(keep_parts)}:v=1:a=1[outv][outa]"
     
-    cmd = f"ffmpeg -i {input_chunk} -filter_complex '{filter_complex}' -map '[outv]' -map '[outa]' {output_chunk}"
+    cmd = f'ffmpeg -i "{input_chunk}" -filter_complex "{filter_complex}" -map "[outv]" -map "[outa]" {output_chunk}'
     subprocess.run(cmd, shell=True, check=True)
 
     return silence_duration
