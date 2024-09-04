@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QLabel, QListWidget, QMessageBox, QSizePolicy
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from video_concatenator import main as concatenator_main
+from concatenator import main as concatenator_main
 
 class ProcessThread(QThread):
     finished = pyqtSignal()

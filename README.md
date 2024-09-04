@@ -25,7 +25,7 @@ Run `python silence_remover_gui.py` to see a GUI with a bunch of settings that'l
 - the buffer duration is there because when you're talking you don't suddenly switch from loud to quiet, it actually takes a few milliseconds for the volume to fall. If we were to just cut that falling period at the point where it went below the decibel threshold, we'd end up with audio that sounds very choppy. in order to avoid that, i've added on a small buffer period (default 0.2 seconds) of audio that would otherwise count as silence around every loud portion. if the cuts sound choppy to you, consider making this buffer period longer
 
 ### concatenator
-If you've got multiple video files you want to combine back-to-back and you're too lazy to open a full video editing software, run `python video_concatenator_gui.py` and it'll bring up a GUI that'll let you
+If you've got multiple video files you want to combine back-to-back and you're too lazy to open a full video editing software, run `python concatenator_gui.py` and it'll bring up a GUI that'll let you
 - pick video files (.mp4) and their ordering
 - pick corresponding timestamp (.txt) files. If a given video in the sequence doesn't have a corresponding timestamp file, you need to hit the "add a placeholder" button and position that entry to match the timestamp-less video. If none of your videos have timestamp files, just ignore that whole part of the app
 - select the output video file's path
@@ -38,6 +38,10 @@ If you've got multiple video files you want to combine back-to-back and you're t
 4. When you're finished with the video hit the `Esc` key to end the script. It's no biggie if you forget to do this until awhile later since hitting this key doesn't record a timestamp; i usually hit it multiple minutes after i've actually finished recording
 5. The timestamps will be saved to `timestamps.txt`. Be careful about overwriting previous timestamps files since there's no way to configure where this gets saved to each time
 
-## NOTES
+## notes
 - I use this repo for my youtube channel [@Tunadorable](https://www.youtube.com/channel/UCeQhm8DwHBg_YEYY0KGM1GQ), go check it out
 - I originally had the idea for the silence remover and when I searched for it online I found https://github.com/carykh/jumpcutter but their version was hella glitchy for me so I just wrote it from scratch. Also wtf is with them charging $100 for the app version of that script, I tried the free trial and that thing didn't even work either
+
+## issues
+Unless otherwise stated, assume I have no intention of fixing the listed issue. You are more than welcome to push a fix if it's important to you, but I only plan on fixing issues which get in the way of my workflow
+- running a file through `silence_remover.py` changes the format in some way such that if you try to run two video files through `concatenator.py`, one which has had silences removed and one which has not, then one of them will properly show the audio but will have a frozen video frame for its entire duration. I run every single one of my videos through the silence remover so it doesn't get in my way at all, but if you intend on fixing it then my suspicion is that it stems from some kind of format change from ffmpeg 

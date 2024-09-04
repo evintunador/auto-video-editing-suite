@@ -44,7 +44,7 @@ def process_timestamps(input_files, timestamp_files):
         video_duration = get_video_duration(input_files[i])
         video_name = os.path.basename(input_files[i])
         
-        if timestamp_file == "[No Timestamp File]":
+        if timestamp_file is None:
             hours = int(current_offset // 3600)
             minutes = int((current_offset % 3600) // 60)
             seconds = int(current_offset % 60)
@@ -61,15 +61,24 @@ def process_timestamps(input_files, timestamp_files):
                     continue
                 timestamp, description = parts
                 try:
-                    hours, minutes, seconds = map(int, timestamp.split(':'))
+                    time_parts = timestamp.split(':')
+                    if len(time_parts) == 2:  # MM:SS format
+                        minutes, seconds = map(int, time_parts)
+                        hours = 0
+                    elif len(time_parts) == 3:  # HH:MM:SS format
+                        hours, minutes, seconds = map(int, time_parts)
+                    else:
+                        print(f"Invalid timestamp format: {timestamp}")
+                        continue
+                    total_seconds = hours * 3600 + minutes * 60 + seconds + current_offset
+                    hours = int(total_seconds // 3600)
+                    minutes = int((total_seconds % 3600) // 60)
+                    seconds = int(total_seconds % 60)
+                    new_timestamp = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                    merged_timestamps.append(f"{new_timestamp} {description}")
                 except ValueError:
+                    print(f"Invalid timestamp: {timestamp}")
                     continue
-                total_seconds = hours * 3600 + minutes * 60 + seconds + current_offset
-                hours = int(total_seconds // 3600)
-                minutes = int((total_seconds % 3600) // 60)
-                seconds = int(total_seconds % 60)
-                new_timestamp = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-                merged_timestamps.append(f"{new_timestamp} {description}")
 
             current_offset += video_duration
 
@@ -119,8 +128,6 @@ def main(input_files, timestamp_files, output_file, output_timestamp_file):
         return
 
     if timestamp_files:
-        # Replace None values with "[No Timestamp File]"
-        timestamp_files = ["[No Timestamp File]" if t is None else t for t in timestamp_files]
         merged_timestamps = process_timestamps(valid_files, timestamp_files)
         write_merged_timestamps(merged_timestamps, output_timestamp_file)
     else:
