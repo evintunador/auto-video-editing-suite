@@ -32,11 +32,13 @@ If you've got multiple video files you want to combine back-to-back and you're t
 - select the output timestamp file's path (defaults to `{path/to/video_name}_timestamps.txt`)
 
 ### timestamps recorder
-1. Run `python timestamps.py` before you start recording 
-2. At the moment you hit record, simultaneously hit the hotkey (defaults to `=`) to start the timer and creat the first "0:00 Intro" timestamp. 
+1. Run `python timestamps.py` before you start recording, which gives you default values for the hotkey (`=`), end key (`Esc`) and filename (`timestamps.txt`). to change the defaults, instead run something like:
+```
+python timestamps.py --hotkey t --filename different_name.txt --endkey q
+```
+2. At the moment you hit record, simultaneously hit the hotkey to start the timer and creat the first "0:00 Timer started!" timestamp. 
 3. for every time you want to set a new timestamp just hit the hotkey again
-4. When you're finished with the video hit the `Esc` key to end the script. It's no biggie if you forget to do this until awhile later since hitting this key doesn't record a timestamp; i usually hit it multiple minutes after i've actually finished recording
-5. The timestamps will be saved to `timestamps.txt`. Be careful about overwriting previous timestamps files since there's no way to configure where this gets saved to each time
+4. When you're finished with the video hit the end key to end the script. It's no biggie if you forget to do this until awhile later since hitting this key doesn't record a timestamp; i usually hit it multiple minutes after i've actually finished recording
 
 ## notes
 - I use this repo for my youtube channel [@Tunadorable](https://www.youtube.com/channel/UCeQhm8DwHBg_YEYY0KGM1GQ), go check it out

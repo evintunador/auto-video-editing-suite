@@ -1,3 +1,4 @@
-0:00 Intro
-0:07 timestamp
-0:15 timestamp
+0:00 Timer started!
+0:01 timestamp
+0:03 timestamp
+0:06 timestamp
