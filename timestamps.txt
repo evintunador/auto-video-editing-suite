@@ -1,4 +1,0 @@
-0:00 Timer started!
-0:01 timestamp
-0:03 timestamp
-0:06 timestamp
