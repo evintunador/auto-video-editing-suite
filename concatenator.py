@@ -45,10 +45,15 @@ def process_timestamps(input_files, timestamp_files):
         video_name = os.path.basename(input_files[i])
         
         if timestamp_file is None:
-            hours = int(current_offset // 3600)
-            minutes = int((current_offset % 3600) // 60)
-            seconds = int(current_offset % 60)
-            new_timestamp = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+            if current_offset < 3600:  # Less than 1 hour
+                minutes = int(current_offset // 60)
+                seconds = int(current_offset % 60)
+                new_timestamp = f"{minutes:02d}:{seconds:02d}"
+            else:
+                hours = int(current_offset // 3600)
+                minutes = int((current_offset % 3600) // 60)
+                seconds = int(current_offset % 60)
+                new_timestamp = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
             merged_timestamps.append(f"{new_timestamp} {video_name}")
             current_offset += video_duration
         else:
@@ -56,25 +61,35 @@ def process_timestamps(input_files, timestamp_files):
                 lines = f.readlines()
             
             for line in lines:
-                parts = line.strip().split(' ', 1)
-                if len(parts) < 2:
+                if not line.strip():
                     continue
-                timestamp, description = parts
+                
+                parts = line.strip().split(' ', 1)
+                timestamp = parts[0]
+                description = parts[1] if len(parts) > 1 else video_name
+                
                 try:
                     time_parts = timestamp.split(':')
                     if len(time_parts) == 2:  # MM:SS format
                         minutes, seconds = map(int, time_parts)
-                        hours = 0
+                        total_seconds = minutes * 60 + seconds + current_offset
                     elif len(time_parts) == 3:  # HH:MM:SS format
                         hours, minutes, seconds = map(int, time_parts)
+                        total_seconds = hours * 3600 + minutes * 60 + seconds + current_offset
                     else:
                         print(f"Invalid timestamp format: {timestamp}")
                         continue
-                    total_seconds = hours * 3600 + minutes * 60 + seconds + current_offset
-                    hours = int(total_seconds // 3600)
-                    minutes = int((total_seconds % 3600) // 60)
-                    seconds = int(total_seconds % 60)
-                    new_timestamp = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+                    if total_seconds < 3600:  # Less than 1 hour
+                        minutes = int(total_seconds // 60)
+                        seconds = int(total_seconds % 60)
+                        new_timestamp = f"{minutes:02d}:{seconds:02d}"
+                    else:
+                        hours = int(total_seconds // 3600)
+                        minutes = int((total_seconds % 3600) // 60)
+                        seconds = int(total_seconds % 60)
+                        new_timestamp = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                        
                     merged_timestamps.append(f"{new_timestamp} {description}")
                 except ValueError:
                     print(f"Invalid timestamp: {timestamp}")
