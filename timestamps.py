@@ -3,7 +3,7 @@ import time
 import os
 import argparse
 
-hotkey = '='
+hotkey = '['
 start_time = None
 timestamps = []
 timestamps_file = "timestamps.txt"
